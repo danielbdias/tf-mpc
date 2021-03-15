@@ -11,6 +11,11 @@ share/
 # wandb
 wandb
 
+# results
+experiments/results/
+*.csv
+*.ods
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
