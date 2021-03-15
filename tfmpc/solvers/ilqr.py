@@ -233,7 +233,7 @@ class iLQR:
 
         states = states.write(0, x0)
 
-        J = 0.0
+        J = tf.constant(0.0)
 
         state = x0
         residual = tf.constant(0.0)
@@ -241,9 +241,11 @@ class iLQR:
         low = self.low
         high = self.high
 
-        cec = tf.constant(True)
-
         for t in tf.range(T):
+            tf.autograph.experimental.set_loop_options(
+                shape_invariants=[(J, tf.TensorShape(None))]
+            )
+
             delta_x = state - x[t]
             delta_u = alpha * k[t] + tf.matmul(K[t], delta_x)
 
