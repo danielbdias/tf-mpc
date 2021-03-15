@@ -1,10 +1,3 @@
-"""
-Linear Quadratic Regulator (LQR):
-
-Please see http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-10.pdf
-for notation and more details on LQR.
-"""
-
 import json
 
 import numpy as np
@@ -15,54 +8,16 @@ from tfmpc.utils import trajectory
 
 class LQR:
 
-    def __init__(self, F, f, C, c):
-        self.F = tf.Variable(F, trainable=False, dtype=tf.float32, name="F")
-        self.f = tf.Variable(f, trainable=False, dtype=tf.float32, name="f")
-        self.C = tf.Variable(C, trainable=False, dtype=tf.float32, name="C")
-        self.c = tf.Variable(c, trainable=False, dtype=tf.float32, name="c")
-
-    @property
-    def n_dim(self):
-        return self.F.shape[1]
-
-    @property
-    def state_size(self):
-        return self.F.shape[0]
-
-    @property
-    def action_size(self):
-        return self.n_dim - self.state_size
-
-    @tf.function
-    def transition(self, x, u):
-        inputs = tf.concat([x, u], axis=0)
-        return tf.matmul(self.F, inputs) + self.f
-
-    @tf.function
-    def cost(self, x, u):
-        inputs = tf.concat([x, u], axis=0)
-        inputs_transposed = tf.transpose(inputs)
-        c1 = 1 / 2 * tf.matmul(tf.matmul(inputs_transposed, self.C), inputs)
-        c2 = tf.matmul(inputs_transposed, self.c)
-        return c1 + c2
-
-    @tf.function
-    def final_cost(self, x):
-        state_size = self.state_size
-        C_xx = self.C[:state_size, :state_size]
-        c_x = self.c[:state_size]
-        x_transposed = tf.transpose(x)
-        c1 = 1 / 2 * tf.matmul(tf.matmul(x_transposed, C_xx), x)
-        c2 = tf.matmul(x_transposed, c_x)
-        return c1 + c2
+    def __init__(self, lqr):
+        self.lqr = lqr
 
     @tf.function
     def backward(self, T):
         policy, value_fn = [], []
 
-        state_size = self.state_size
+        state_size = self.lqr.state_size
 
-        F, f, C, c = self.F, self.f, self.C, self.c
+        F, f, C, c = self.lqr.F, self.lqr.f, self.lqr.C, self.lqr.c
 
         V = C[:state_size, :state_size]
         v = c[:state_size]
@@ -134,16 +89,14 @@ class LQR:
         actions = []
         costs = []
 
-        F, f, C, c = self.F, self.f, self.C, self.c
-
         state = x0
 
         for t in range(T):
             K, k = policy[t]
             action = tf.matmul(K, state) + k
 
-            next_state = self.transition(state, action)
-            cost = self.cost(state, action)
+            next_state = self.lqr.transition(state, action)
+            cost = self.lqr.cost(state, action)
 
             state = next_state
 
@@ -151,7 +104,7 @@ class LQR:
             actions.append(action)
             costs.append(cost)
 
-        final_cost = self.final_cost(state)
+        final_cost = self.lqr.final_cost(state)
         costs.append(final_cost)
 
         states = tf.stack(states, axis=0)
@@ -164,18 +117,3 @@ class LQR:
         policy, value_fn = self.backward(T)
         states, actions, costs = self.forward(policy, x0, T)
         return trajectory.Trajectory(states, actions, costs)
-
-    def dump(self, file):
-        config = {
-            "F": self.F.numpy().tolist(),
-            "f": self.f.numpy().tolist(),
-            "C": self.C.numpy().tolist(),
-            "c": self.c.numpy().tolist()
-        }
-        json.dump(config, file)
-
-    @classmethod
-    def load(cls, file):
-        config = json.load(file)
-        config = {k: np.array(v).astype("f") for k, v in config.items()}
-        return cls(**config)
