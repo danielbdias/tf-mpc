@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -5,6 +7,11 @@ import tensorflow as tf
 from tfmpc.envs.hvac import HVAC
 from tfmpc.envs.navigation import Navigation
 from tfmpc.envs.reservoir import Reservoir
+
+
+@pytest.fixture
+def batch_size():
+    return random.randint(1, 32)
 
 
 def sample_state(env, batch_size=1):
@@ -17,7 +24,6 @@ def sample_action(env, batch_size=1):
     action_size = env.action_size
     sample = [env.action_space.sample() for _ in range(batch_size)]
     return tf.stack(sample)
-
 
 
 def sample_adjacency_matrix(n):
