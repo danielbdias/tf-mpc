@@ -5,14 +5,10 @@ import os
 
 import click
 import gym
-import numpy as np
 import psutil
-import tensorflow as tf
 import tensorflow.compat.v1.logging as tf_logging
 import tuneconfig
 
-from tfmpc import envs
-import tfmpc.solvers.lqr
 from tfmpc.launchers import online_ilqr_run
 from tfmpc.launchers import ilqr_run
 
@@ -26,103 +22,6 @@ tf_logging.set_verbosity(tf_logging.ERROR)
 @click.group()
 def cli():
     pass
-
-
-@cli.command()
-@click.argument("initial-state")
-@click.option(
-    "--action-size", "-a",
-    type=click.IntRange(min=1),
-    default=1,
-    help="The number of action variables.")
-@click.option(
-    "--horizon", "-hr",
-    type=click.IntRange(min=1),
-    default=10,
-    help="The number of timesteps.")
-@click.option(
-    "--debug",
-    is_flag=True,
-    help="Debug flag.")
-@click.option(
-    "--verbose", "-v",
-    is_flag=True,
-    help="Verbosity flag.")
-def lqr(initial_state, action_size, horizon, debug, verbose):
-    """Generate and solve a randomly-created LQR problem.
-
-    Args:
-
-        initial_state: list of floats.
-    """
-
-    if verbose:
-        tf_logging.set_verbosity(tf_logging.INFO)
-
-    if debug:
-        tf_logging.set_verbosity(tf_logging.DEBUG)
-
-    initial_state = list(map(float, initial_state.split()))
-    x0 = np.array(initial_state, dtype=np.float32)[:,np.newaxis]
-    state_size = len(initial_state)
-
-    solver = envs.make_lqr(state_size, action_size)
-    trajectory = solver.solve(x0, horizon)
-
-    print(repr(trajectory))
-    print()
-    print(str(trajectory))
-
-
-@cli.command()
-@click.argument("initial-state")
-@click.argument("goal")
-@click.option(
-    "--beta", "-b",
-    type=float,
-    default=1.0,
-    help="The weight of the action cost.")
-@click.option(
-    "--horizon", "-hr",
-    type=click.IntRange(min=1),
-    default=10,
-    help="The number of timesteps.")
-@click.option(
-    "--debug",
-    is_flag=True,
-    help="Debug flag.")
-@click.option(
-    "--verbose", "-v",
-    is_flag=True,
-    help="Verbosity flag.")
-def navlin(initial_state, goal, beta, horizon, debug, verbose):
-    """Generate and solve the linear navigation LQR problem.
-
-    Args:
-
-        initial_state: list of floats.
-
-        goal: list of floats.
-    """
-
-    if verbose:
-        tf_logging.set_verbosity(tf_logging.INFO)
-
-    if debug:
-        tf_logging.set_verbosity(tf_logging.DEBUG)
-
-    initial_state = list(map(float, initial_state.split()))
-    x0 = np.array(initial_state, dtype=np.float32)[:,np.newaxis]
-
-    goal = list(map(float, goal.split()))
-    g = np.array(goal, dtype=np.float32)[:,np.newaxis]
-
-    solver = envs.make_lqr_linear_navigation(g, beta)
-    trajectory = solver.solve(x0, horizon)
-
-    print(repr(trajectory))
-    print()
-    print(str(trajectory))
 
 
 @cli.command()
@@ -212,7 +111,8 @@ def ilqr(**kwargs):
 
     exec_func = online_ilqr_run if kwargs["online"] else ilqr_run
 
-    results = runner.run(exec_func, kwargs["num_samples"], kwargs["num_workers"])
+    results = runner.run(
+        exec_func, kwargs["num_samples"], kwargs["num_workers"])
 
     for trial_id, runs in results.items():
         for _, trajectory in runs:
