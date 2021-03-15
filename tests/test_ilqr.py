@@ -77,7 +77,8 @@ def test_derivatives(solver, initial_state, horizon):
 def test_backward(solver, initial_state, horizon):
     states, actions, costs = solver.start(initial_state, horizon)
     transition_model, cost_model, final_cost_model = solver.derivatives(states, actions)
-    K, k, J, dV1, dV2 = solver.backward(horizon, actions, transition_model, cost_model, final_cost_model)
+    mu = 1.0
+    K, k, J, dV1, dV2 = solver.backward(horizon, actions, transition_model, cost_model, final_cost_model, mu)
 
     action_size = solver.env.action_size
     state_size = solver.env.state_size
@@ -92,8 +93,10 @@ def test_backward(solver, initial_state, horizon):
 def test_forward(solver, initial_state, horizon):
     x, u, c = solver.start(initial_state, horizon)
     transition_model, cost_model, final_cost_model = solver.derivatives(x, u)
-    K, k, J, dV1, dV2 = solver.backward(horizon, u, transition_model, cost_model, final_cost_model)
-    states, actions, costs, J_hat, residual = solver.forward(x, u, K, k)
+    mu = 1.0
+    alpha = 1.0
+    K, k, J, dV1, dV2 = solver.backward(horizon, u, transition_model, cost_model, final_cost_model, mu)
+    states, actions, costs, J_hat, residual = solver.forward(x, u, K, k, alpha)
 
     assert states.shape == x.shape
     assert actions.shape == u.shape
