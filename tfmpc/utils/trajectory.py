@@ -68,6 +68,11 @@ class Trajectory:
             rslt += transition + "\n"
         return rslt
 
+    def summary(self):
+        print(repr(self))
+        print()
+        print(str(self))
+
     def save(self, filepath):
         df = pd.DataFrame()
 
