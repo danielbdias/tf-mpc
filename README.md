@@ -12,84 +12,87 @@ $ pip3 install -U tfmpc
 
 # Usage
 
-## LQR
+```bash
+$ tfmpc ilqr --help
 
-```text
-$ tfmpc lqr --help
-Usage: tfmpc lqr [OPTIONS] INITIAL_STATE
+Usage: tfmpc ilqr [OPTIONS] ENV
 
-  Generate and solve a randomly-created LQR problem.
+  Run iLQR for a given environment and horizon.
 
   Args:
 
-      initial_state: list of floats.
+      ENV: Path to the environment's config JSON file.
 
 Options:
-  -a, --action-size INTEGER RANGE
-                                  The number of action variables.
-  -hr, --horizon INTEGER RANGE    The number of timesteps.
+  --online                        Online mode flag.  [default: False]
+  --ignore-final-cost             Ignore state-dependent final cost.
+                                  [default: False]
+  -hr, --horizon INTEGER RANGE    The number of timesteps.  [default: 10]
+  --atol FLOAT RANGE              Absolute tolerance for convergence.
+                                  [default: 0.005]
+  -miter, --max-iterations INTEGER RANGE
+                                  Maximum number of iterations.  [default:
+                                  100]
+  --logdir PATH                   Directory used for logging results.
+                                  [default: /tmp/ilqr/]
+  -ns, --num-samples INTEGER RANGE
+                                  Number of runs.  [default: 1]
+  -nw, --num-workers INTEGER RANGE
+                                  Number of worker processes (min=1, max=12).
+                                  [default: 1]
+  -v, --verbose                   Verbosity level flag.
   --help                          Show this message and exit.
 ```
 
-```text
-$ tfmpc lqr -a 2 -hr 10 -- "-1.0 0.5 3.6"
+# Examples
 
-Trajectory(init=[-1.   0.5  3.6], final=[-6.8887715 -5.8231974 -2.4906292], total=-22.6460)
 
-Steps |             States             |       Actions        |  Costs  
-===== | ============================== | ==================== | ========
-  0   | [  2.4519,  -3.4247,   1.5683] | [ -2.4000,  -1.9967] |   1.7630
-  1   | [ -1.3597,   0.6466,   0.4730] | [ -0.4974,  -2.2108] |  -4.9768
-  2   | [  1.2518,  -2.4087,   1.8576] | [ -0.8572,  -1.7336] |   0.6628
-  3   | [ -0.5029,  -0.3449,   1.0460] | [ -0.9881,  -2.3027] |  -3.9363
-  4   | [  0.7103,  -1.8426,   1.4427] | [ -0.9374,  -1.8516] |  -1.2144
-  5   | [ -0.2330,  -0.6179,   1.4067] | [ -0.9244,  -2.2985] |  -3.2234
-  6   | [  0.5808,  -1.8719,   1.0914] | [ -1.0021,  -1.7919] |  -1.7650
-  7   | [ -0.5810,  -0.5750,   1.7039] | [ -0.7238,  -2.5045] |  -3.1283
-  8   | [ -0.1008,  -2.8592,   0.9244] | [ -0.8470,  -2.0201] |  -1.7682
-  9   | [ -6.8888,  -5.8232,  -2.4906] | [  2.1113,  -2.2470] |  -5.0595
+## LQR
+
+```bash
+$ python examples/lqr.py
+
+Trajectory(init=[-0.9436722 -5.9413767 -9.7090645], final=[-6.831274    3.5397437   0.79844564], total=-34.2876)
+
+Steps |             States             |            Actions             |  Costs  
+===== | ============================== | ============================== | ========
+  0   | [-29.6400,  12.4868,  -6.1247] | [ 12.0202,   6.2650,   2.7019] |   9.9491
+  1   | [  1.1229,  -1.0781,  -0.9041] | [ 24.8006,  16.6294, -10.9740] |  49.6677
+  2   | [ -8.8750,   2.3962,  -4.4266] | [  3.7858,   3.3769,  -1.8138] |  -1.6455
+  3   | [ -9.3617,   3.2755,  -3.5806] | [ 11.8333,   7.8142,  -3.6503] | -11.4392
+  4   | [ -6.6389,   2.0026,  -3.2240] | [ 11.3348,   7.6663,  -4.2552] | -11.8703
+  5   | [ -7.7849,   2.3658,  -3.6332] | [  9.6319,   6.4642,  -3.2991] | -12.2632
+  6   | [ -7.5215,   2.4822,  -3.0080] | [ 10.1523,   6.7136,  -3.4948] | -12.7255
+  7   | [ -6.2336,   1.5849,  -2.9592] | [  9.6488,   6.2573,  -3.1976] | -12.8830
+  8   | [ -8.7144,   2.0473,  -4.4850] | [ 10.1518,   6.4578,  -2.9710] | -11.6011
+  9   | [ -6.8313,   3.5397,   0.7984] | [  8.3644,   5.6785,  -3.5642] | -12.9032
 
 ```
 
 ## Linear Navigation
 
-```text
-$ tfmpc navlin --help
-Usage: tfmpc navlin [OPTIONS] INITIAL_STATE GOAL
+```bash
+$ python examples/navigation_lqr.py
 
-  Generate and solve the linear navigation LQR problem.
+Goal = [[-17.498825073242188], [-55.275390625]]
 
-  Args:
+Trajectory(init=[0. 0.], final=[-17.498783 -55.275257], total=-32385.3555)
 
-      initial_state: list of floats.
-
-      goal: list of floats.
-
-Options:
-  -b, --beta FLOAT              The weight of the action cost.
-  -hr, --horizon INTEGER RANGE  The number of timesteps.
-  --help                        Show this message and exit.
-```
-
-```text
-$ tfmpc navlin -b 5.0 -hr 10 -- "0.0 0.0" "8.0 -9.0"
-
-Trajectory(init=[0. 0.], final=[ 7.757592 -8.727291], total=-1045.4086)
-
-Steps |        States        |       Actions        |   Costs  
-===== | ==================== | ==================== | =========
-  0   | [  2.8645,  -3.2225] | [  2.8645,  -3.2225] |   92.9486
-  1   | [  4.7018,  -5.2895] | [  1.8373,  -2.0670] |  -47.0048
-  2   | [  5.8795,  -6.6145] | [  1.1777,  -1.3249] | -104.6422
-  3   | [  6.6331,  -7.4623] | [  0.7536,  -0.8478] | -128.3791
-  4   | [  7.1134,  -8.0025] | [  0.4802,  -0.5403] | -138.1544
-  5   | [  7.4163,  -8.3433] | [  0.3029,  -0.3408] | -142.1795
-  6   | [  7.6025,  -8.5528] | [  0.1862,  -0.2094] | -143.8354
-  7   | [  7.7091,  -8.6727] | [  0.1067,  -0.1200] | -144.5131
-  8   | [  7.7576,  -8.7273] | [  0.0485,  -0.0545] | -144.7817
-  9   | [  7.7576,  -8.7273] | [  0.0000,   0.0000] | -144.8669
+Steps |        States        |       Actions        |   Costs   
+===== | ==================== | ==================== | ==========
+  0   | [-12.8100, -40.4644] | [-12.8100, -40.4644] |  900.7320 
+  1   | [-16.2425, -51.3068] | [ -3.4324, -10.8424] | -3055.5571
+  2   | [-17.1622, -54.2120] | [ -0.9197,  -2.9052] | -3339.6064
+  3   | [-17.4086, -54.9905] | [ -0.2464,  -0.7784] | -3360.0002
+  4   | [-17.4747, -55.1990] | [ -0.0660,  -0.2086] | -3361.4644
+  5   | [-17.4924, -55.2549] | [ -0.0177,  -0.0559] | -3361.5696
+  6   | [-17.4971, -55.2699] | [ -0.0047,  -0.0150] | -3361.5774
+  7   | [-17.4984, -55.2739] | [ -0.0013,  -0.0040] | -3361.5776
+  8   | [-17.4987, -55.2750] | [ -0.0003,  -0.0011] | -3361.5774
+  9   | [-17.4988, -55.2753] | [ -0.0001,  -0.0003] | -3361.5776
 
 ```
+
 
 # Documentation
 
