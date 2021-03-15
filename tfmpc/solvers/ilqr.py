@@ -285,6 +285,8 @@ class iLQR:
         run_id = self._config.get("run_id", 0)
         num_workers = self._config.get("num_workers", 1)
 
+        show_progress = show_progress or self._config.get("show_progress", False)
+
         desc = f"horizon={int(T)}"
         with experiment.Experiment.trange(epochs, run_id, num_workers, desc=desc, show_progress=show_progress) as t:
 
@@ -347,6 +349,7 @@ class iLQR:
         return traj, iteration
 
     def _backward(self, T, u_hat, transition_model, cost_model, final_cost_model, mu, delta):
+        T = tf.constant(T, dtype=tf.int32)
 
         done = False
         num_iter = 0
