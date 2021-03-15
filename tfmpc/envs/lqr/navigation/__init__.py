@@ -3,9 +3,10 @@ import numpy as np
 import tensorflow as tf
 
 from tfmpc.envs.diffenv import DiffEnv
+from tfmpc.envs.gymenv import GymEnv
 
 
-class NavigationLQR(DiffEnv):
+class NavigationLQR(DiffEnv, GymEnv):
 
     def __init__(self, goal, beta, low=None, high=None):
         self.goal = goal
@@ -28,13 +29,13 @@ class NavigationLQR(DiffEnv):
         return self.goal.shape[0]
 
     @tf.function
-    def transition(self, state, action, batch=False):
+    def transition(self, state, action):
         return state + action
 
     @tf.function
-    def cost(self, state, action, batch=False):
-        state = tf.squeeze(state)
-        goal = tf.squeeze(self.goal)
+    def cost(self, state, action):
+        state = tf.squeeze(state, axis=-1)
+        goal = tf.squeeze(self.goal, axis=-1)
         action = tf.squeeze(action)
         c1 = tf.reduce_sum((state - goal) ** 2, axis=-1)
         c2 = tf.reduce_sum(action ** 2, axis=-1)
@@ -42,8 +43,8 @@ class NavigationLQR(DiffEnv):
 
     @tf.function
     def final_cost(self, state):
-        state = tf.squeeze(state)
-        goal = tf.squeeze(self.goal)
+        state = tf.squeeze(state, axis=-1)
+        goal = tf.squeeze(self.goal, axis=-1)
         return tf.reduce_sum((state - goal) ** 2, axis=-1)
 
     @classmethod
