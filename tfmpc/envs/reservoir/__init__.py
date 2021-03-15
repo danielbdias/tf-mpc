@@ -47,9 +47,8 @@ class Reservoir(DiffEnv, GymEnv):
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-        tf.TensorSpec(shape=None, dtype=tf.bool)
     ])
-    def transition(self, state, action, cec):
+    def transition(self, state, action):
         rlevel = state
         batch_size = tf.shape(rlevel)[0]
 
@@ -57,7 +56,7 @@ class Reservoir(DiffEnv, GymEnv):
         inflow = self._inflow(outflow)
 
         vaporated = self._vaporated(state)
-        rainfall = self._rainfall(batch_size, cec)
+        rainfall = self._rainfall(batch_size)
 
         rlevel_ = (
             rlevel
@@ -100,16 +99,10 @@ class Reservoir(DiffEnv, GymEnv):
         return relative_flow * rlevel
 
     @tf.function
-    def _rainfall(self, batch_size, cec=tf.constant(True)):
-        if cec:
-            rainfall = tf.reshape(
-                tf.tile(self.rain_shape * self.rain_scale, [batch_size, 1]),
-                shape=[batch_size, -1, 1])
-        else:
-            rainfall = tf.random.gamma(shape=[batch_size,],
-                                       alpha=self.rain_shape,
-                                       beta=1/self.rain_scale)
-        return rainfall
+    def _rainfall(self, batch_size):
+        return tf.reshape(
+            tf.tile(self.rain_shape * self.rain_scale, [batch_size, 1]),
+            shape=[batch_size, -1, 1])
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32)

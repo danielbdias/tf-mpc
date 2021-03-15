@@ -15,12 +15,10 @@ class DiffEnv:
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32)
     ])
     def get_linear_transition(self, state, action):
-        cec =  tf.constant(True)
-
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(state)
             tape.watch(action)
-            f = self.transition(state, action, cec)
+            f = self.transition(state, action)
 
         f_x = tape.batch_jacobian(f, state)
         f_u = tape.batch_jacobian(f, action)

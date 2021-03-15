@@ -16,11 +16,10 @@ class GymEnv(gym.core.Env):
     def step(self, action):
         self._t += 1
 
-        cec = tf.constant(False)
         state = tf.expand_dims(self._state, axis=0)
         action = tf.expand_dims(action, axis=0)
 
-        next_state = tf.squeeze(self.transition(state, action, cec), axis=0)
+        next_state = tf.squeeze(self.transition(state, action), axis=0)
         cost = tf.squeeze(self.cost(state, action))
         done = (self._t == self.horizon)
 

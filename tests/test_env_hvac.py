@@ -48,25 +48,14 @@ def test_transition(hvac):
     action2 = sample_action(hvac, batch_size=batch_size)
 
     for state, action in [(state1, action1), (state2, action2)]:
-        cec = tf.constant(True)
-        next_state = hvac.transition(state, action, cec)
-        assert next_state.shape == state.shape
-
-        cec = tf.constant(False)
-        next_state = hvac.transition(state, action, cec)
+        next_state = hvac.transition(state, action)
         assert next_state.shape == state.shape
 
     fn = hvac.transition
 
-    cec = tf.constant(True)
-    cfn1 = fn.get_concrete_function(state1, action1, cec)
-    cfn2 = fn.get_concrete_function(state2, action2, cec)
-
-    cec = tf.constant(False)
-    cfn3 = fn.get_concrete_function(state1, action1, cec)
-    cfn4 = fn.get_concrete_function(state2, action2, cec)
-
-    assert cfn1 == cfn2 == cfn3 == cfn4
+    cfn1 = fn.get_concrete_function(state1, action1)
+    cfn2 = fn.get_concrete_function(state2, action2)
+    assert cfn1 == cfn2
 
 
 def test_linear_transition(hvac):
@@ -82,8 +71,7 @@ def test_linear_transition(hvac):
         model = hvac.get_linear_transition(state, action)
 
         # check f
-        cec = tf.constant(True)
-        next_state = hvac.transition(state, action, cec)
+        next_state = hvac.transition(state, action)
         assert model.f.shape == next_state.shape
         assert tf.reduce_all(model.f == next_state)
 
@@ -142,17 +130,8 @@ def test_conduction_between_rooms(hvac):
         batch_size = tf.shape(state)[0]
         state_size = tf.shape(state)[1]
 
-        cec = tf.constant(False)
-        conduction = hvac._conduction_between_rooms(state, cec)
+        conduction = hvac._conduction_between_rooms(state)
         assert conduction.shape == state.shape
-
-        cec = tf.constant(True)
-        conduction = hvac._conduction_between_rooms(state, cec)
-        assert conduction.shape == state.shape
-
-        conduction2 = hvac._conduction_between_rooms(state, cec)
-        assert conduction2.shape == state.shape
-        assert tf.reduce_all(conduction == conduction2)
 
         adj = tf.logical_or(hvac.adj, tf.transpose(hvac.adj))
         R_wall = hvac.R_wall
@@ -174,15 +153,9 @@ def test_conduction_between_rooms(hvac):
 
     fn = hvac._conduction_between_rooms
 
-    cec = tf.constant(True)
-    cfn1 = fn.get_concrete_function(state1, cec)
-    cfn2 = fn.get_concrete_function(state2, cec)
-
-    cec = tf.constant(False)
-    cfn3 = fn.get_concrete_function(state1, cec)
-    cfn4 = fn.get_concrete_function(state2, cec)
-
-    assert cfn1 == cfn2 == cfn3 == cfn4
+    cfn1 = fn.get_concrete_function(state1)
+    cfn2 = fn.get_concrete_function(state2)
+    assert cfn1 == cfn2
 
 
 def test_conduction_with_outside(hvac):
@@ -192,16 +165,8 @@ def test_conduction_with_outside(hvac):
     for state in [state1, state2]:
         batch_size = tf.shape(state)[0]
 
-        cec = tf.constant(False)
-        conduction = hvac._conduction_with_outside(state, cec)
+        conduction = hvac._conduction_with_outside(state)
         assert conduction.shape == state.shape
-
-        cec = tf.constant(True)
-        conduction = hvac._conduction_with_outside(state, cec)
-        assert conduction.shape == state.shape
-
-        conduction2 = hvac._conduction_with_outside(state, cec)
-        assert tf.reduce_all(conduction == conduction2)
 
         for i in range(batch_size):
             conduction_ = conduction[i]
@@ -218,15 +183,9 @@ def test_conduction_with_outside(hvac):
 
     fn = hvac._conduction_with_outside
 
-    cec = tf.constant(True)
-    cfn1 = fn.get_concrete_function(state1, cec)
-    cfn2 = fn.get_concrete_function(state2, cec)
-
-    cec = tf.constant(False)
-    cfn3 = fn.get_concrete_function(state1, cec)
-    cfn4 = fn.get_concrete_function(state2, cec)
-
-    assert cfn1 == cfn2 == cfn3 == cfn4
+    cfn1 = fn.get_concrete_function(state1)
+    cfn2 = fn.get_concrete_function(state2)
+    assert cfn1 == cfn2
 
 
 def test_conduction_with_hall(hvac):
@@ -236,16 +195,8 @@ def test_conduction_with_hall(hvac):
     for state in [state1, state2]:
         batch_size = tf.shape(state)[0]
 
-        cec = tf.constant(False)
-        conduction = hvac._conduction_with_hall(state, cec)
+        conduction = hvac._conduction_with_hall(state)
         assert conduction.shape == state.shape
-
-        cec = tf.constant(True)
-        conduction = hvac._conduction_with_hall(state, cec)
-        assert conduction.shape == state.shape
-
-        conduction2 = hvac._conduction_with_hall(state, cec)
-        assert tf.reduce_all(conduction == conduction2)
 
         for i in range(batch_size):
             conduction_ = conduction[i]
@@ -262,15 +213,9 @@ def test_conduction_with_hall(hvac):
 
     fn = hvac._conduction_with_hall
 
-    cec = tf.constant(True)
-    cfn1 = fn.get_concrete_function(state1, cec)
-    cfn2 = fn.get_concrete_function(state2, cec)
-
-    cec = tf.constant(False)
-    cfn3 = fn.get_concrete_function(state1, cec)
-    cfn4 = fn.get_concrete_function(state2, cec)
-
-    assert cfn1 == cfn2 == cfn3 == cfn4
+    cfn1 = fn.get_concrete_function(state1)
+    cfn2 = fn.get_concrete_function(state2)
+    assert cfn1 == cfn2
 
 
 def test_cost(hvac):

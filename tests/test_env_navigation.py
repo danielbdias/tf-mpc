@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -5,12 +7,12 @@ import tensorflow as tf
 from tests.conftest import sample_state, sample_action
 
 
-def test_deceleration(navigation):
+def test_deceleration(navigation, batch_size):
     center = navigation.deceleration["center"]
     decay = navigation.deceleration["decay"]
 
     state1 = sample_state(navigation)
-    state2 = sample_state(navigation, batch_size=10)
+    state2 = sample_state(navigation, batch_size)
 
     for state in [state1, state2]:
         batch_size = tf.shape(state)[0]
@@ -41,60 +43,45 @@ def test_deceleration(navigation):
     assert cfn1 == cfn2
 
 
-def test_transition(navigation):
+def test_transition(navigation, batch_size):
     state1 = sample_state(navigation)
     action1 = sample_action(navigation)
 
-    batch_size = 10
-    state2 = sample_state(navigation, batch_size=batch_size)
-    action2 = sample_action(navigation, batch_size=batch_size)
+    state2 = sample_state(navigation, batch_size)
+    action2 = sample_action(navigation, batch_size)
 
     for state, action in [(state1, action1), (state2, action2)]:
         batch_size = tf.shape(state)[0]
 
         lambda_ = navigation._deceleration(state)
 
-        cec = tf.constant(False)
-        next_state = navigation.transition(state, action, cec)
+        next_state = navigation.transition(state, action)
         assert next_state.shape == state.shape
-
-        next_state2 = navigation.transition(state, action, cec)
-        assert tf.reduce_any(next_state != next_state2)
-
-        cec = tf.constant(True)
-        next_state = navigation.transition(state, action, cec)
-        assert next_state.shape == state.shape
-
-        next_state2 = navigation.transition(state, action, cec)
-        assert tf.reduce_all(next_state == next_state2)
 
         for i in range(batch_size):
-            assert tf.reduce_all(next_state[i] == state[i] + lambda_[i] * action[i])
+            assert tf.reduce_all(
+                next_state[i] == state[i] + lambda_[i] * action[i])
 
     fn = navigation.transition
 
-    cec = tf.constant(True)
-    cfn1 = fn.get_concrete_function(state1, action1, cec)
-    cfn2 = fn.get_concrete_function(state2, action2, cec)
+    cfn1 = fn.get_concrete_function(state1, action1)
+    cfn2 = fn.get_concrete_function(state2, action2)
 
-    cec = tf.constant(False)
-    cfn3 = fn.get_concrete_function(state1, action1, cec)
-    cfn4 = fn.get_concrete_function(state2, action2, cec)
+    cfn3 = fn.get_concrete_function(state1, action1)
+    cfn4 = fn.get_concrete_function(state2, action2)
 
     assert cfn1 == cfn2 == cfn3 == cfn4
 
 
-def test_linear_transition(navigation):
+def test_linear_transition(navigation, batch_size):
     goal = navigation.goal
     decay = navigation.deceleration["decay"]
     center = navigation.deceleration["center"]
 
     state1 = sample_state(navigation)
     action1 = sample_action(navigation)
-
-    batch_size = 10
-    state2 = sample_state(navigation, batch_size=batch_size)
-    action2 = sample_action(navigation, batch_size=batch_size)
+    state2 = sample_state(navigation, batch_size)
+    action2 = sample_action(navigation, batch_size)
 
     for state, action in [(state1, action1), (state2, action2)]:
         batch_size = tf.shape(state)[0]
@@ -108,8 +95,7 @@ def test_linear_transition(navigation):
 
         assert f.shape == state.shape
 
-        cec = tf.constant(True)
-        assert tf.reduce_all(f == navigation.transition(state, action, cec))
+        assert tf.reduce_all(f == navigation.transition(state, action))
 
         assert f_u.shape == [batch_size] + [navigation.action_size] * 2
         assert tf.reduce_all(f_u == tf.reshape(lambda_, [-1, 1, 1]) * tf.eye(2))
@@ -139,13 +125,11 @@ def test_linear_transition(navigation):
     assert cfn1 == cfn2
 
 
-def test_cost(navigation):
+def test_cost(navigation, batch_size):
     goal = navigation.goal
 
     state1 = sample_state(navigation)
     action1 = sample_action(navigation)
-
-    batch_size = 10
     state2 = sample_state(navigation, batch_size=batch_size)
     action2 = sample_action(navigation, batch_size=batch_size)
 
@@ -167,13 +151,11 @@ def test_cost(navigation):
     assert cfn1 == cfn2
 
 
-def test_quadratic_cost(navigation):
+def test_quadratic_cost(navigation, batch_size):
     goal = navigation.goal
 
     state1 = sample_state(navigation)
     action1 = sample_action(navigation)
-
-    batch_size = 10
     state2 = sample_state(navigation, batch_size=batch_size)
     action2 = sample_action(navigation, batch_size=batch_size)
 
@@ -217,7 +199,7 @@ def test_quadratic_cost(navigation):
 def test_quadratic_final_cost(navigation):
     goal = navigation.goal
 
-    state = sample_state(navigation)[0]
+    state = navigation.obs_space.sample()
 
     model = navigation.get_quadratic_final_cost(state)
     l = model.l

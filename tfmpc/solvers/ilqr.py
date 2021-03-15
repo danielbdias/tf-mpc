@@ -69,8 +69,6 @@ class iLQR:
 
         state = x0
 
-        cec = tf.constant(True)
-
         for t in tf.range(T):
             action = tf.random.uniform(shape=[], minval=minval, maxval=maxval)
 
@@ -78,7 +76,7 @@ class iLQR:
             action = tf.expand_dims(action, axis=0)
 
             cost = tf.squeeze(self.env.cost(state, action))
-            state = self.env.transition(state, action, cec)
+            state = self.env.transition(state, action)
 
             state = tf.reshape(state, tf.shape(x0))
             action = tf.squeeze(action, axis=0)
@@ -253,7 +251,7 @@ class iLQR:
             state = tf.expand_dims(state, axis=0)
             action = tf.expand_dims(action, axis=0)
             cost = tf.squeeze(self.env.cost(state, action))
-            state = self.env.transition(state, action, cec)
+            state = self.env.transition(state, action)
             state = tf.reshape(state, tf.shape(x0))
             action = tf.reshape(action, tf.shape(u0))
 

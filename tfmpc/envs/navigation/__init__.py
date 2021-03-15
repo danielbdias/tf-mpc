@@ -35,21 +35,12 @@ class Navigation(DiffEnv, GymEnv):
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-        tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-        tf.TensorSpec(shape=None, dtype=tf.bool)
+        tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32)
     ])
-    def transition(self, state, action, cec):
+    def transition(self, state, action):
         lambda_ = self._deceleration(state)
         lambda_ = tf.reshape(lambda_, [-1, 1, 1])
-
-        p = state + lambda_ * action
-
-        if cec:
-            next_state = p
-        else:
-            noise = tf.random.truncated_normal(tf.shape(p), mean=0.0, stddev=0.2)
-            next_state = p + noise
-
+        next_state = state + lambda_ * action
         return next_state
 
     @tf.function(input_signature=[
@@ -57,6 +48,7 @@ class Navigation(DiffEnv, GymEnv):
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32)
     ])
     def cost(self, state, action):
+        del action
         state = tf.squeeze(state, axis=-1)
         goal = tf.squeeze(self.goal)
         return tf.reduce_sum((state - goal) ** 2, axis=-1)

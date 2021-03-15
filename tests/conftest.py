@@ -152,6 +152,6 @@ def navigation(n_zones):
         "center": tf.random.normal(shape=[n_zones, 2, 1]),
         "decay": tf.random.uniform(shape=[n_zones,], maxval=3.0)
     }
-    low = [-1.0, -1.0]
-    high = [1.0, 1.0]
+    low = [[-1.0], [-1.0]]
+    high = [[1.0], [1.0]]
     return Navigation(goal, deceleration, low, high)

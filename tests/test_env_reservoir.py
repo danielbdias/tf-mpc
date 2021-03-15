@@ -94,17 +94,12 @@ def test_rainfall(reservoir):
         rainfall = reservoir._rainfall(batch_size)
         assert rainfall.shape == rlevel.shape
 
-        rainfall = reservoir._rainfall(batch_size, cec=tf.constant(False))
-        assert rainfall.shape == rlevel.shape
-
     fn = reservoir._rainfall
     batch_size1 = tf.shape(rlevel1)[0]
     batch_size2 = tf.shape(rlevel2)[0]
     cfn1 = fn.get_concrete_function(batch_size1)
-    cfn2 = fn.get_concrete_function(batch_size1, cec=tf.constant(False))
-    cfn3 = fn.get_concrete_function(batch_size2)
-    cfn4 = fn.get_concrete_function(batch_size2, cec=tf.constant(False))
-    assert cfn1 == cfn2 == cfn3 == cfn4
+    cfn2 = fn.get_concrete_function(batch_size2)
+    assert cfn1 == cfn2
 
 
 def test_outflow(reservoir):
@@ -144,12 +139,7 @@ def test_transition(reservoir):
     for state, action in [(state1, action1), (state2, action2)]:
         assert state.shape == action.shape
 
-        cec = tf.constant(False)
-        next_state = reservoir.transition(state, action, cec)
-        assert next_state.shape == state.shape
-
-        cec = tf.constant(True)
-        next_state = reservoir.transition(state, action, cec)
+        next_state = reservoir.transition(state, action)
         assert next_state.shape == state.shape
 
         rain_mean = reservoir.rain_shape * reservoir.rain_scale
@@ -164,17 +154,13 @@ def test_transition(reservoir):
         assert tf.reduce_all(tf.abs(balance) < 1e-3)
 
     fn = reservoir.transition
-    cfn1 = fn.get_concrete_function(state1, action1, tf.constant(True))
-    cfn2 = fn.get_concrete_function(state2, action2, tf.constant(True))
-    cfn3 = fn.get_concrete_function(state1, action1, tf.constant(False))
-    cfn4 = fn.get_concrete_function(state2, action2, tf.constant(False))
-    assert cfn1 == cfn2 == cfn3 == cfn4
+    cfn1 = fn.get_concrete_function(state1, action1)
+    cfn2 = fn.get_concrete_function(state2, action2)
+    assert cfn1 == cfn2
 
 
 def test_linear_transition_model(reservoir):
     batch_size = 10
-
-    cec = tf.constant(True)
 
     state1 = sample_state(reservoir)
     action1 = sample_action(reservoir)
@@ -186,7 +172,7 @@ def test_linear_transition_model(reservoir):
         assert state.shape == action.shape
         batch_size = tf.shape(state)[0]
 
-        next_state = reservoir.transition(state, action, cec)
+        next_state = reservoir.transition(state, action)
 
         model = reservoir.get_linear_transition(state, action)
         f = model.f

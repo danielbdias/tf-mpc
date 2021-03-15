@@ -78,17 +78,16 @@ class HVAC(DiffEnv, GymEnv):
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-        tf.TensorSpec(shape=None, dtype=tf.bool)
     ])
-    def transition(self, state, action, cec):
+    def transition(self, state, action):
         temp = state
         air = action * self.air_max
 
-        heating = self._heating(air, temp, cec)
+        heating = self._heating(air, temp)
 
-        conduction_between_rooms = self._conduction_between_rooms(temp, cec)
-        conduction_with_outside = self._conduction_with_outside(temp, cec)
-        conduction_with_hall = self._conduction_with_hall(temp, cec)
+        conduction_between_rooms = self._conduction_between_rooms(temp)
+        conduction_with_outside = self._conduction_with_outside(temp)
+        conduction_with_hall = self._conduction_with_hall(temp)
 
         temp_ = (
             temp
@@ -147,78 +146,34 @@ class HVAC(DiffEnv, GymEnv):
         )
 
     @tf.function
-    def _heating(self, air, temp, cec):
-        mean = air * self.CAP_AIR * (self.TEMP_AIR - temp)
-
-        if cec:
-            sample = mean
-        else:
-            noise = tf.random.truncated_normal(shape=tf.shape(mean),
-                                               mean=0.0,
-                                               stddev=self.air_std)
-            sample = mean + noise
-
-        return sample
+    def _heating(self, air, temp):
+        return air * self.CAP_AIR * (self.TEMP_AIR - temp)
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-        tf.TensorSpec(shape=None, dtype=tf.bool)
     ])
-    def _conduction_between_rooms(self, temp, cec):
+    def _conduction_between_rooms(self, temp):
         adj = tf.logical_or(self.adj, tf.transpose(self.adj))
         adj = tf.cast(adj, tf.float32)
-
-        mean = tf.reduce_sum(
+        return tf.reduce_sum(
             - adj / self.R_wall * (temp - tf.linalg.matrix_transpose(temp)),
             axis=-1,
             keepdims=True
         )
 
-        if cec:
-            sample = mean
-        else:
-            noise = tf.random.truncated_normal(shape=tf.shape(mean),
-                                               mean=0.0,
-                                               stddev=self.room_std)
-            sample = mean + noise
-
-        return sample
-
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-        tf.TensorSpec(shape=None, dtype=tf.bool)
     ])
-    def _conduction_with_outside(self, temp, cec):
+    def _conduction_with_outside(self, temp):
         adj_outside = tf.cast(self.adj_outside, tf.float32)
-        mean =  adj_outside / self.R_outside * (self.temp_outside - temp)
-
-        if cec:
-            sample = mean
-        else:
-            noise = tf.random.truncated_normal(shape=tf.shape(mean),
-                                               mean=0.0,
-                                               stddev=self.outside_std)
-            sample = mean + noise
-
-        return sample
+        return adj_outside / self.R_outside * (self.temp_outside - temp)
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-        tf.TensorSpec(shape=None, dtype=tf.bool)
     ])
-    def _conduction_with_hall(self, temp, cec):
+    def _conduction_with_hall(self, temp):
         adj_hall = tf.cast(self.adj_hall, tf.float32)
-        mean = adj_hall / self.R_hall * (self.temp_hall - temp)
-
-        if cec:
-            sample = mean
-        else:
-            noise = tf.random.truncated_normal(shape=tf.shape(mean),
-                                               mean=0.0,
-                                               stddev=self.hall_std)
-            sample = mean + noise
-
-        return sample
+        return adj_hall / self.R_hall * (self.temp_hall - temp)
 
     def __repr__(self):
         return f"HVAC({self.state_size})"
