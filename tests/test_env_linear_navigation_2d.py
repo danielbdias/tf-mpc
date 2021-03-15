@@ -4,14 +4,20 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from tfmpc.envs import make_lqr_linear_navigation
+from tfmpc.envs.lqr.navigation import make_lqr_navigation_problem
+from tfmpc.solvers.lqr import LQR
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def nav():
     goal = np.array([[8.32], [-5.5]])
     beta = 10.0
-    return make_lqr_linear_navigation(goal, beta)
+    return make_lqr_navigation_problem(goal, beta)
+
+
+@pytest.fixture
+def solver(nav):
+    return LQR(nav)
 
 
 def test_make_lqr_linear_navigation(nav):
@@ -41,19 +47,21 @@ def test_make_lqr_linear_navigation(nav):
     assert c.shape == (n_dim, 1)
 
 
-def test_backward(nav):
+def test_backward(solver):
     T = 10
-    policy, value_fn = nav.backward(T)
+    policy, value_fn = solver.backward(T)
     assert len(policy) == len(value_fn)
 
 
-def test_forward(nav):
+def test_forward(solver):
+    nav = solver.lqr
+
     T = 10
     x0 = np.random.normal(size=(nav.state_size, 1)).astype("f")
 
-    policy, _ = nav.backward(T)
+    policy, _ = solver.backward(T)
 
-    x, u, c = nav.forward(policy, x0, T)
+    x, u, c = solver.forward(policy, x0, T)
     assert len(x) == len(u) + 1 == len(c)
     assert np.allclose(x[0], x0, atol=1e-4)
 
