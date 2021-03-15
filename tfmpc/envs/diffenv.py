@@ -5,7 +5,7 @@ import tensorflow as tf
 
 TransitionApprox = namedtuple("TransitionApprox", "f f_x f_u")
 CostApprox = namedtuple("CostApprox", "l l_x l_u l_xx l_uu l_ux l_xu")
-FinalCostApprox = namedtuple("CostApprox", "l l_x l_xx")
+FinalCostApprox = namedtuple("FinalCostApprox", "l l_x l_xx")
 
 
 class DiffEnv:
@@ -80,7 +80,8 @@ class DiffEnv:
         l_xx = tape.jacobian(
             l_x, state,
             unconnected_gradients=tf.UnconnectedGradients.ZERO)
-        l_xx = tf.squeeze(l_xx)
+
+        l_xx = tf.squeeze(l_xx, axis=[1, 3])
 
         del tape
 
