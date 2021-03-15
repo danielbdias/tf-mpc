@@ -4,6 +4,19 @@ import tensorflow as tf
 
 from tfmpc.envs.diffenv import DiffEnv
 from tfmpc.envs.gymenv import GymEnv
+from tfmpc.envs.lqr import LQR
+
+
+def make_lqr_navigation_problem(goal, beta):
+    state_size = action_size = goal.shape[0]
+
+    F = np.concatenate([np.identity(state_size)] * action_size, axis=1).astype("f")
+    f = np.zeros((state_size, 1)).astype("f")
+
+    C = np.diag([2.0] * state_size + [2.0 * beta] * action_size).astype("f")
+    c = np.concatenate([-2.0 * goal, np.zeros((action_size, 1))], axis=0).astype("f")
+
+    return LQR(F, f, C, c)
 
 
 class NavigationLQR(DiffEnv, GymEnv):
