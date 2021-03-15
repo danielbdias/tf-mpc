@@ -4,16 +4,20 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from tfmpc.envs import make_lqr
+from tfmpc.envs.lqr import make_random_lqr_problem
 from tfmpc.solvers.lqr import LQR
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def lqr():
     state_size = np.random.randint(2, 10)
     action_size = np.random.randint(2, 10)
-    return make_lqr(state_size, action_size)
+    return make_random_lqr_problem(state_size, action_size)
 
+
+@pytest.fixture
+def solver(lqr):
+    return LQR(lqr)
 
 def test_make_lqr(lqr):
     state_size = lqr.state_size
@@ -42,19 +46,21 @@ def test_make_lqr(lqr):
     assert c.shape == (n_dim, 1)
 
 
-def test_backward(lqr):
+def test_backward(solver):
     T = 10
-    policy, value_fn = lqr.backward(T)
+    policy, value_fn = solver.backward(T)
     assert len(policy) == len(value_fn) == T
 
 
-def test_forward(lqr):
+def test_forward(solver):
+    lqr = solver.lqr
+
     T = 10
     x0 = np.random.normal(size=(lqr.state_size, 1)).astype("f")
 
-    policy, value_fn = lqr.backward(T)
+    policy, value_fn = solver.backward(T)
 
-    x, u, c = lqr.forward(policy, x0, T)
+    x, u, c = solver.forward(policy, x0, T)
     assert len(x) == len(u) + 1 == len(c)
     assert np.allclose(x[0], x0, atol=1e-2)
 
@@ -86,10 +92,10 @@ def test_forward(lqr):
         assert np.allclose(value, cost_to_go, atol=1e-2)
 
 
-def test_solve(lqr):
+def test_solve(lqr, solver):
     x0 = np.random.normal(size=(lqr.state_size, 1)).astype("f")
     T = 10
-    trajectory = lqr.solve(x0, T)
+    trajectory = solver.solve(x0, T)
     assert len(trajectory.states) == len(trajectory.actions) + 1
     assert len(trajectory.states) == len(trajectory.costs)
 
@@ -101,7 +107,7 @@ def test_dump_and_load(lqr):
         lqr.dump(file)
 
     with open(tmpfile, "r") as file:
-        lqr2 = LQR.load(file)
+        lqr2 = lqr.load(file)
 
     for k in lqr.__dict__:
         assert tf.reduce_all(getattr(lqr, k) == getattr(lqr2, k))
