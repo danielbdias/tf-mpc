@@ -38,7 +38,9 @@ class iLQR:
         self.c1 = kwargs.get("c1", 0.0)
         self.alpha_min = kwargs.get("alpha_min", 1e-3)
 
-        self.logger = kwargs.get("logger", loggers.get_logger("py_logging", logdir=kwargs["logdir"]))
+        # logging
+        logdir = kwargs.get("logdir", "/tmp/ilqr")
+        self.logger = kwargs.get("logger", loggers.get_logger("py_logging", logdir=logdir))
 
         self._config = kwargs
 
