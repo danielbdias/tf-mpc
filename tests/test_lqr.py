@@ -100,14 +100,11 @@ def test_solve(lqr, solver):
     assert len(trajectory.states) == len(trajectory.costs)
 
 
-def test_dump_and_load(lqr):
-    tmpfile = "/tmp/config.json"
+def test_dump_and_load(lqr, tmp_path):
+    tmpfile = tmp_path / "config.json"
 
-    with open(tmpfile, "w") as file:
-        lqr.dump(file)
-
-    with open(tmpfile, "r") as file:
-        lqr2 = lqr.load(file)
+    lqr.dump(tmpfile)
+    lqr2 = lqr.load(tmpfile)
 
     for k in lqr.__dict__:
         assert tf.reduce_all(getattr(lqr, k) == getattr(lqr2, k))
