@@ -8,6 +8,7 @@ from tfmpc.envs.lqr import LQR
 
 
 def make_lqr_navigation_problem(goal, beta):
+    goal = tf.convert_to_tensor(goal)
     state_size = action_size = goal.shape[0]
 
     F = np.concatenate([np.identity(state_size)] * action_size, axis=1).astype("f")
@@ -21,14 +22,9 @@ def make_lqr_navigation_problem(goal, beta):
 
 class NavigationLQR(DiffEnv, GymEnv):
 
-    def __init__(self, goal, beta, low=None, high=None):
-        self.goal = goal
-        self.beta = beta
-
-        if low is None:
-            low = -np.inf
-        if high is None:
-            high = np.inf
+    def __init__(self, goal, beta, low=-1.0, high=1.0):
+        self.goal = tf.convert_to_tensor(goal)
+        self.beta = tf.concert_to_tensor(beta)
 
         self.obs_space = gym.spaces.Box(-np.inf, np.inf, shape=tf.shape(goal))
         self.action_space = gym.spaces.Box(low, high, shape=tf.shape(goal))
