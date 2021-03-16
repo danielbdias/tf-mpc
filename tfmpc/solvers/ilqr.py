@@ -1,12 +1,3 @@
-"""
-Iterative Linear Quadratic Regulator (iLQR)
-
-For details please see:
-
->> Control-Limited Differential Dynamic Programming (ICRA, 2014)
->> Tassa, Mansard, and Todorov (2014)
-"""
-
 import logging
 import os
 import time
@@ -22,6 +13,14 @@ from tfmpc import loggers
 
 
 class iLQR:
+    """
+    Iterative Linear Quadratic Regulator (iLQR)
+
+    For details please see:
+
+    >> Control-Limited Differential Dynamic Programming (ICRA, 2014)
+    >> Tassa, Mansard, and Todorov (2014)
+    """
 
     def __init__(self, env, **kwargs):
         self.env = env
