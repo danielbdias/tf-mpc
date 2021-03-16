@@ -25,11 +25,22 @@ class LQR:
     - http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-10.pdf
     """
 
-    def __init__(self, F, f, C, c):
+    def __init__(self, F, f, C, c, name=None):
+        self.name = name
+
         self.F = tf.Variable(F, trainable=False, dtype=tf.float32, name="F")
         self.f = tf.Variable(f, trainable=False, dtype=tf.float32, name="f")
         self.C = tf.Variable(C, trainable=False, dtype=tf.float32, name="C")
         self.c = tf.Variable(c, trainable=False, dtype=tf.float32, name="c")
+
+    @property
+    def config(self):
+        return {
+            "F": self.F.numpy().tolist(),
+            "f": self.f.numpy().tolist(),
+            "C": self.C.numpy().tolist(),
+            "c": self.c.numpy().tolist()
+        }
 
     @property
     def n_dim(self):
@@ -66,17 +77,18 @@ class LQR:
         c2 = tf.matmul(x_transposed, c_x)
         return tf.squeeze(c1 + c2)
 
-    def dump(self, file):
-        config = {
-            "F": self.F.numpy().tolist(),
-            "f": self.f.numpy().tolist(),
-            "C": self.C.numpy().tolist(),
-            "c": self.c.numpy().tolist()
-        }
-        json.dump(config, file)
+    def dump(self, filepath):
+        config = self.config
+        with open(filepath, "w") as file:
+            json.dump(self.config, file)
 
     @classmethod
-    def load(cls, file):
-        config = json.load(file)
+    def load(cls, filepath):
+        with open(filepath, "r") as file:
+            config = json.load(file)
         config = {k: np.array(v).astype("f") for k, v in config.items()}
         return cls(**config)
+
+    def __repr__(self):
+        name = self.name or "LQR"
+        return f"{name}(n={self.state_size},m={self.action_size})"
