@@ -1,8 +1,12 @@
 import json
 
+import gym
 import numpy as np
 from sklearn.datasets import make_spd_matrix
 import tensorflow as tf
+
+from tfmpc.envs.diffenv import DiffEnv
+from tfmpc.envs.gymenv import GymEnv
 
 
 def make_random_lqr_problem(state_size, action_size):
@@ -17,7 +21,7 @@ def make_random_lqr_problem(state_size, action_size):
     return LQR(F, f, C, c)
 
 
-class LQR:
+class LQR(DiffEnv, GymEnv):
     """
     Linear Quadratic Regulator (LQR)
 
@@ -32,6 +36,11 @@ class LQR:
         self.f = tf.Variable(f, trainable=False, dtype=tf.float32, name="f")
         self.C = tf.Variable(C, trainable=False, dtype=tf.float32, name="C")
         self.c = tf.Variable(c, trainable=False, dtype=tf.float32, name="c")
+
+        self.obs_space = gym.spaces.Box(
+            -np.inf, np.inf, shape=(self.state_size, 1))
+        self.action_space = gym.spaces.Box(
+            -1., 1., shape=(self.action_size, 1))
 
     @property
     def config(self):
@@ -56,26 +65,28 @@ class LQR:
 
     @tf.function
     def transition(self, x, u):
-        inputs = tf.concat([x, u], axis=0)
-        return tf.matmul(self.F, inputs) + self.f
+        inputs = tf.concat([x, u], axis=1)
+        return self.F @ inputs + self.f
 
     @tf.function
     def cost(self, x, u):
-        inputs = tf.concat([x, u], axis=0)
-        inputs_transposed = tf.transpose(inputs)
-        c1 = 1 / 2 * tf.matmul(tf.matmul(inputs_transposed, self.C), inputs)
-        c2 = tf.matmul(inputs_transposed, self.c)
-        return tf.squeeze(c1 + c2)
+        inputs = tf.concat([x, u], axis=1)
+        inputs_T = tf.transpose(inputs, perm=[0, 2, 1])
+        c1 = 1 / 2 * inputs_T @ self.C @ inputs
+        c2 = inputs_T @ self.c
+        c = tf.squeeze(c1 + c2, axis=[1, 2])
+        return c
 
     @tf.function
     def final_cost(self, x):
-        state_size = self.state_size
-        C_xx = self.C[:state_size, :state_size]
-        c_x = self.c[:state_size]
-        x_transposed = tf.transpose(x)
-        c1 = 1 / 2 * tf.matmul(tf.matmul(x_transposed, C_xx), x)
-        c2 = tf.matmul(x_transposed, c_x)
-        return tf.squeeze(c1 + c2)
+        n = self.state_size
+        C_xx = self.C[:n, :n]
+        c_x = self.c[:n]
+        x_T = tf.transpose(x)
+        c1 = 1 / 2 * x_T @ C_xx @ x
+        c2 = x_T @ c_x
+        c = tf.squeeze(c1 + c2)
+        return c
 
     def dump(self, filepath):
         config = self.config
