@@ -11,6 +11,7 @@ from tfmpc.envs.lqr import LQR
 from tfmpc.envs.lqr import make_random_lqr_problem
 from tfmpc.envs.lqr.navigation import make_lqr_navigation_problem
 from tfmpc.solvers.ilqr import iLQR
+from tfmpc.utils.viz import TracePlotter
 
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -32,7 +33,7 @@ def lqr(n=3, m=3):
     return task
 
 
-def benchmark(dirpath, horizon=10):
+def benchmark(dirpath, horizon=100):
     dirpath = Path(dirpath)
 
     for path in dirpath.iterdir():
@@ -52,8 +53,24 @@ def run(path, horizon=10):
     solver = iLQR(task)
     trajectory, num_iterations = solver.solve(x0, horizon)
 
-    tracepath = path.parent / path.stem / "ilqr" / "trace.csv"
+    tracepath = path.parent / path.stem / "ilqr" / f"trace-hr={horizon}.csv"
     trajectory.save(tracepath)
+
+    fname = tracepath.parent / f"plot-hr={horizon}.png"
+    plot_results(
+        trajectory, suptitle=f"iLQR (horizon={horizon})", fname=fname)
+
+
+def plot_results(trajectory, suptitle=None, show=True, fname=None):
+    plotter = TracePlotter(trajectory)
+
+    with plotter.display(
+        nrows=2, ncols=2, suptitle=suptitle, show=show, fname=fname
+    ) as axes:
+        plotter.plot_cumulative_cost(axes[0][0])
+        plotter.plot_cost_history(axes[1][0])
+        plotter.plot_states_history(axes[0][1])
+        plotter.plot_actions_history(axes[1][1])
 
 
 if __name__ == "__main__":
