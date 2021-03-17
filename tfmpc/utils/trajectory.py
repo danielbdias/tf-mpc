@@ -15,6 +15,18 @@ class Trajectory:
         self.costs = costs.numpy()
 
     @property
+    def timesteps(self):
+        return list(range(len(self) + 1))
+
+    @property
+    def state_size(self):
+        return self.states.shape[1]
+
+    @property
+    def action_size(self):
+        return self.actions.shape[1]
+
+    @property
     def initial_state(self):
         return self.states[0]
 
