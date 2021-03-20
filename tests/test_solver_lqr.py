@@ -19,6 +19,7 @@ def lqr():
 def solver(lqr):
     return LQR(lqr)
 
+
 def test_make_lqr(lqr):
     state_size = lqr.state_size
     action_size = lqr.action_size
