@@ -63,8 +63,8 @@ class CartPoleSwingUp(DiffEnv, GymEnv):
 
     def cost(self, state, action):
         del state
-        return tf.reduce_sum(0.01 * action ** 2, axis=[1, 2])
+        return tf.reduce_sum(0.0001 * action ** 2, axis=[1, 2])
 
     def final_cost(self, state):
         goal = tf.constant([[2.0], [math.pi], [0.0], [0.0]])
-        return tf.reduce_sum((state - goal) ** 2)
+        return 100 * tf.reduce_sum((state - goal) ** 2)
