@@ -24,7 +24,7 @@ class NavigationLQR(DiffEnv, GymEnv):
 
     def __init__(self, goal, beta, low=-1.0, high=1.0):
         self.goal = tf.convert_to_tensor(goal)
-        self.beta = tf.concert_to_tensor(beta)
+        self.beta = tf.convert_to_tensor(beta)
 
         self.obs_space = gym.spaces.Box(-np.inf, np.inf, shape=tf.shape(goal))
         self.action_space = gym.spaces.Box(low, high, shape=tf.shape(goal))
