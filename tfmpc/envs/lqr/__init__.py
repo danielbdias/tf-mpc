@@ -65,16 +65,16 @@ class LQR(DiffEnv, GymEnv):
 
     @tf.function
     def transition(self, x, u):
-        inputs = tf.concat([x, u], axis=1)
+        inputs = tf.concat([x, u], axis=0)
         return self.F @ inputs + self.f
 
     @tf.function
     def cost(self, x, u):
-        inputs = tf.concat([x, u], axis=1)
-        inputs_T = tf.transpose(inputs, perm=[0, 2, 1])
+        inputs = tf.concat([x, u], axis=0)
+        inputs_T = tf.transpose(inputs)
         c1 = 1 / 2 * inputs_T @ self.C @ inputs
         c2 = inputs_T @ self.c
-        c = tf.squeeze(c1 + c2, axis=[1, 2])
+        c = tf.squeeze(c1 + c2)
         return c
 
     @tf.function
