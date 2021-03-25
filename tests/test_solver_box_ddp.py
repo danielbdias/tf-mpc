@@ -1,9 +1,10 @@
+import numpy as np
 import pytest
 import tensorflow as tf
 import tensorflow.compat.v1.logging as tf_logging
 
 from tfmpc.envs.lqr import navigation
-from tfmpc.solvers import ilqr
+from tfmpc.solvers.box_ddp import BoxDDP
 
 tf_logging.set_verbosity(tf_logging.ERROR)
 
@@ -37,12 +38,9 @@ def horizon():
 def solver(goal, beta, bounds):
     goal = tf.constant(goal)
     beta = tf.constant(beta)
-    low = high = None
-    if bounds:
-        low, high = bounds
-
+    low, high = bounds if bounds else (-np.inf, np.inf)
     env = navigation.NavigationLQR(goal, beta, low, high)
-    return ilqr.iLQR(env)
+    return BoxDDP(env)
 
 
 def test_start(solver, initial_state, horizon):
