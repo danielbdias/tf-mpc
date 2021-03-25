@@ -128,6 +128,7 @@ class iLQR:
         final_cost_model = self.env.get_quadratic_final_cost(states[-1])
         return transition_model, cost_model, final_cost_model
 
+    @tf.function
     def backward(self, T, f_model, l_model, l_final_model):
         """Implements the DDP backward pass.
 
@@ -141,13 +142,23 @@ class iLQR:
             (controller, dV1, dV2, g_norm): the controller, the corresponding
             expected value improvement terms, and the total gradient norm.
         """
-        K, k = [], []
-        dV1 = dV2 = 0.0
+        action_size = self.env.action_size
+        state_size = self.env.state_size
+
+        K = tf.TensorArray(
+            size=T, dtype=tf.float32, element_shape=(action_size, state_size)
+        )
+        k = tf.TensorArray(
+            size=T, dtype=tf.float32, element_shape=(action_size, 1)
+        )
+
+        dV1 = 0.0
+        dV2 = 0.0
         g_norm = 0.0
 
         V_model = ValueModel(l_final_model.l_x, l_final_model.l_xx)
 
-        for t in range(T - 1, -1, -1):
+        for t in tf.range(T - 1, -1, -1):
 
             # evaluation
             f_t_model = DynamicsModel(*[m[t] for m in f_model])
@@ -155,30 +166,32 @@ class iLQR:
             Q_model = self._hamiltonian(f_t_model, l_t_model, V_model)
 
             # optimization
-            controller = self._controller(Q_model.Q_uu, Q_model.Q_u, Q_model.Q_ux)
+            controller = self._controller(
+                Q_model.Q_uu, Q_model.Q_u, Q_model.Q_ux)
 
-            K.insert(0, controller.K)
-            k.insert(0, controller.k)
+            K = K.write(t, controller.K)
+            k = k.write(t, controller.k)
 
             # value update
             V_model = self._value_update(Q_model, controller)
 
             # expected improvement terms
             dV1 += tf.matmul(controller.k, Q_model.Q_u, transpose_a=True)
+            dV1 = tf.squeeze(dV1)
             dV2 += tf.matmul(
                 tf.matmul(controller.k, Q_model.Q_uu, transpose_a=True),
                 controller.k)
+            dV2 = tf.squeeze(dV2)
 
             # gradient norm (stopping criteria)
             g_norm += tf.reduce_sum(Q_model.Q_u ** 2)
 
-        K = tf.stack(K, axis=0)
-        k = tf.stack(k, axis=0)
-        dV1 = tf.squeeze(dV1)
-        dV2 = tf.squeeze(dV2)
+        K = K.stack()
+        k = k.stack()
 
         return Controller(K, k), dV1, dV2, g_norm
 
+    @tf.function
     def forward(self, candidate, controller, alpha):
         """Implements the DDP forward pass.
 
@@ -194,18 +207,32 @@ class iLQR:
         x = candidate.states
         u = candidate.actions
 
-        states = [x[0]]
-        actions = []
-        costs = []
+        T = tf.shape(u)[0]
+
+        state_size = self.env.state_size
+        action_size = self.env.action_size
+
+        states = tf.TensorArray(
+            size=T+1, dtype=tf.float32, element_shape=(state_size, 1)
+        )
+        actions = tf.TensorArray(
+            size=T, dtype=tf.float32, element_shape=(action_size, 1)
+        )
+        costs = tf.TensorArray(
+            size=T+1, dtype=tf.float32, element_shape=()
+        )
+
+        states = states.write(0, x[0])
 
         total_cost = 0.0
         residual = 0.0
 
         x_t = x[0]
 
-        K, k = controller
+        for t in tf.range(T):
+            K_t = controller.K[t]
+            k_t = controller.k[t]
 
-        for t, (K_t, k_t) in enumerate(zip(K, k)):
             delta_x = x_t - x[t]
             delta_u = alpha * k_t + tf.matmul(K_t, delta_x)
 
@@ -218,20 +245,20 @@ class iLQR:
             x_t = tf.squeeze(self.env.transition(x_t, u_t), axis=0)
             u_t = tf.squeeze(u_t, axis=0)
 
-            states.append(x_t)
-            actions.append(u_t)
-            costs.append(c_t)
+            states = states.write(t+1, x_t)
+            actions = actions.write(t, u_t)
+            costs = costs.write(t, c_t)
 
             total_cost += c_t
-            residual = max(residual, tf.reduce_max(tf.abs(delta_u)))
+            residual = tf.math.maximum(residual, tf.reduce_max(tf.abs(delta_u)))
 
         c_T = self.env.final_cost(x_t)
-        costs.append(c_T)
+        costs = costs.write(T, c_T)
         total_cost += c_T
 
-        states = tf.stack(states, axis=0)
-        actions = tf.stack(actions, axis=0)
-        costs = tf.stack(costs, axis=0)
+        states = states.stack()
+        actions = actions.stack()
+        costs = costs.stack()
 
         return Trajectory(states, actions, costs), total_cost, residual
 
@@ -254,6 +281,8 @@ class iLQR:
         self._candidate, self._current_total_cost = self.start(x0, T)
 
         converged = False
+
+        T = tf.constant(T)
 
         for n_iter in range(1, self.max_iterations + 1):
 
@@ -282,10 +311,8 @@ class iLQR:
                         return self._candidate, n_iter, converged
 
             # forward
-            alpha = 1.0
-
             for k in range(self.step_length_num):
-                alpha = self.step_length_factor ** k
+                alpha = tf.constant(self.step_length_factor ** k)
 
                 trajectory, total_cost, residual = self.forward(
                     self._candidate, controller, alpha
